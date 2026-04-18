@@ -13,7 +13,7 @@ grid = {
 }
 
 # Added warehouse grid drawing in hardware reasearch
-grid_position = {
+grid_positions = {
     "start": (0,1),
     "node1": (1,2),
     "node2": (1,1),
