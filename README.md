@@ -7,7 +7,9 @@ A Raspberry Pi 4 robot that navigates a warehouse grid using AI search algorithm
 - L298N Motor Controllers
 - 2 DC Motors
 - Ultrasonic Sensor
-- 4 AA Batteries for motors, and Portable Charger for Pi
+- tcrt_5000
+- tcs_34725
+- 7.4v Li-ion Battery, Portable Charger for Pi,  5v
 
 ## Running the Program
 
