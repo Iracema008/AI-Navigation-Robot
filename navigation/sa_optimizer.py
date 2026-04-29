@@ -28,7 +28,7 @@ def find_cost(pickup_nodes, start="start"):
 
     return total_cost
 
-def simmulated_annealing(start="start", pickup_nodes=pickup_nodes, temp=10, cooling_rate=0.1, iterations=1000):
+def simulated_annealing(start="start", pickup_nodes=pickup_nodes, temp=10, cooling_rate=0.1, iterations=1000):
     ''' small delta -> higher acceptance
         high temp early on -> more risk
         (and vice versa )
