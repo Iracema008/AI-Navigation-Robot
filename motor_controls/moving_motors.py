@@ -1,5 +1,5 @@
-
-
+''' Motor controls"'''
+ 
 import RPi.GPIO as GPIO
 import motor_controls.gpio_setup as pins
 
