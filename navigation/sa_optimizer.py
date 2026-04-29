@@ -4,7 +4,7 @@ import random
 import math
 
 from grid import pickup_nodes
-from astar import yabadabadoo, path_cost
+from astar import astar
 
 def find_neighbors(pickup_nodes):
     #making a copy of current pickup points
@@ -21,9 +21,8 @@ def find_cost(pickup_nodes, start="start"):
     total_cost = 0
 
     for n in pickup_nodes:
-        # implement this later
-        path = yabadabadoo(curr, n)
-        total += path_cost()
+        path, path_cost = astar(curr, n)
+        total_cost += path_cost
         curr = n
 
     return total_cost
@@ -63,9 +62,34 @@ def simulated_annealing(start="start", pickup_nodes=pickup_nodes, temp=10, cooli
            cheapest_cost = curr_cost
 
         # cool down temp
-        tempt *= (1 - cooling_rate)
+        temp *= (1 - cooling_rate)
 
     print(f'Best Solution: {best_order}')
     print(f'Best Score: {cheapest_cost}')
 
     return best_order, cheapest_cost
+
+if __name__ == "__main__":
+    best_order, cheapest_cost = simulated_annealing()
+    print("SA Pickup Order:", best_order)
+    print("SA Total Cost:", cheapest_cost)
+
+    # compare to brute force
+    from itertools import permutations
+    pickup_list = list(pickup_nodes.keys())
+    best_brute = None 
+    best_brute_cost = float('inf')
+
+    for perm in permutations(pickup_list):
+        cost = find_cost(perm)
+        if cost < best_brute_cost:
+            best_brute_cost = cost
+            best_brute = list(perm)
+
+    print("Brute Force Pickup Order:", best_brute)
+    print("Brute Force Total Cost:", best_brute_cost)
+
+    if best_order == best_brute:
+        print("SA found the optimal solution!")
+    else:
+        print("SA did not find the optimal solution.")
