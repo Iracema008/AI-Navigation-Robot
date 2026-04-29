@@ -11,3 +11,6 @@ def yabadabadoo(curr, node):
 
 def path_cost():
     pass
+
+def astar(start, goal):
+    pass
