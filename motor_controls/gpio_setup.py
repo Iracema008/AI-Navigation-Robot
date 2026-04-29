@@ -32,7 +32,7 @@ def layout_gpio():
     GPIO.setup(in3, GPIO.OUT)
     GPIO.setup(in4, GPIO.OUT)
     GPIO.setup(enb, GPIO.OUT)
-    
+
     # pi recieves sensor INPUT from ir
     GPIO.setup(line_ir, GPIO.IN)
 
