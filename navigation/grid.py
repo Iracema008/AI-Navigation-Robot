@@ -1,14 +1,14 @@
 '''Grid Implementation for "Warehouse" '''
 
 grid = {
-    "start": {"node1": 2, "node2":4},
+    "start": {"node1": 2, "node2":2},
     "node1": {"start": 2, "node3":3, "node4":5},
-    "node2": {"start": 4, "node4":2, "node5":3},
-    "node3": {"node1":3, "node6":2},
-    "node4":{"node1":5, "node2":2, "node6":4, "node7":3},
-    "node5":{"node2":3, "node7":2},
-    "node6": {"node3":2, "node4":4, "end":3},
-    "node7":{"node4":3, "node5":2, "end":2},
+    "node2": {"start": 2, "node4":2, "node5":3},
+    "node3": {"node1":3, "node6":2, "node7":4},
+    "node4":{"node1":5, "node2":2, "node7":3},
+    "node5":{"node2":3, "node7":6},
+    "node6": {"node3":2, "end":3},
+    "node7":{"node4":3, "node3":4, "node5":6, "end":2},
     "end": {"node6":3, "node7":2},
 }
 
