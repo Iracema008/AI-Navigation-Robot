@@ -10,7 +10,7 @@ in2 = 23
 ena = 25
 
 # Right motor control inputs
-in3 = 16
+in3 = 26
 in4 = 27
 enb = 22
 
