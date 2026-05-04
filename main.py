@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     try:
         print("Planning route...")
-        best_order, cheapest_cost, full_route = simulated_annealing()
+        best_order, cheapest_cost= simulated_annealing()
 
         print("Starting drive in 3 seconds... ")
         time.sleep(3)
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         current_position = "start"
         for target in best_order:
             print(f"\n Heading to: {target} ({pickup_nodes[target]})")
-            path = astar(current_position, target)
+            path, cost = astar(current_position, target)
             navigate_path(path)
 
             # arrived, wait for pickup
@@ -101,6 +101,9 @@ if __name__ == "__main__":
 
             current_position = target
 
+        print("Heading to End...")
+        path, cost = astar(current_position, "end")
+        navigate_path(path)
         print("\nAll pickups complete!")
 
     except KeyboardInterrupt:

@@ -4,7 +4,7 @@ import RPi.GPIO as GPIO
 import motor_controls.gpio_setup as pins
 
 
-def forward():
+def forward(speed=70):
     GPIO.output(pins.in1, GPIO.HIGH)
     GPIO.output(pins.in2, GPIO.LOW)
     GPIO.output(pins.in3, GPIO.HIGH)
