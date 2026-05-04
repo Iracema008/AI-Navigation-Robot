@@ -4,14 +4,14 @@ import RPi.GPIO as GPIO
 import motor_controls.gpio_setup as pins
 
 
-def forward():
+def forward(speed=70):
     GPIO.output(pins.in1, GPIO.HIGH)
     GPIO.output(pins.in2, GPIO.LOW)
     GPIO.output(pins.in3, GPIO.HIGH)
     GPIO.output(pins.in4, GPIO.LOW)
 
-    pins.pwm_right.ChangeDutyCycle(0)
-    pins.pwm_left.ChangeDutyCycle(0)
+    pins.pwm_right.ChangeDutyCycle(speed)
+    pins.pwm_left.ChangeDutyCycle(speed)
 
 # these are the same
 def left(fast=70, slow=35):
