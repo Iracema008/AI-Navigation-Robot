@@ -3,7 +3,7 @@
 import math
 import heapq
 
-from grid import grid, grid_positions
+from navigation.grid import grid, grid_positions
 
 
 def heuristic(node, goal):

@@ -3,8 +3,8 @@
 import random
 import math
 
-from grid import pickup_nodes
-from astar import astar
+from navigation.grid import pickup_nodes
+from navigation.astar import astar
 
 def find_neighbors(pickup_nodes):
     #making a copy of current pickup points
