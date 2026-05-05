@@ -9,6 +9,8 @@ rgb_sensor = adafruit_tcs34725.TCS34725(i2c)
 def classify_color(r, g, b):
     if r > 150 and g < 100 and b < 100:
         return "red"
+    elif r > 150 and g > 80 and g < 160 and b < 80:
+        return "orange"
     elif g > 150 and r < 100 and b < 100:
         return "green"
     elif b > 150 and r < 100 and g < 100:
