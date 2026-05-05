@@ -27,3 +27,28 @@ A Raspberry Pi 4 robot that navigates a warehouse grid using AI search algorithm
 
 ### 5. Run Program
     python3 main.py
+
+# Running the Simulator (Any Computer)
+
+### 1. Clone Repo
+    git clone https://github.com/Iracema008/AI-Navigation-Robot.git
+    cd AI-Navigation-Robot
+
+### 2. Create Virtual Environment
+    python3 -m venv r_venv
+    source r_venv/bin/activate
+
+### 3. Install Dependencies
+    pip install flask
+
+### 4. Run Simulator
+    python3 simulator.py
+
+### 5. Open in Browser
+    http://localhost:5050
+
+### Simulator Controls
+- Select pickup nodes using the checkboxes
+- Click edges on the graph to mark them as blocked (obstacles)
+- Press Start to run SA + A* and watch the robot navigate
+- Press Reset to clear and start over

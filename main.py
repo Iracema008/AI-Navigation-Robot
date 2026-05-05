@@ -215,7 +215,6 @@ def check_pickup():
         print(f"  Reached: {next_node}")
     stop()'''
 def navigate_path(path):
-    '''New navigate path that uses color detection to confirm arrival at pickup nodes, time-based for intermediate nodes'''
     print(f"  Navigating: {path}")
     for i in range(len(path) - 1):
         current = path[i]
@@ -226,19 +225,19 @@ def navigate_path(path):
             direction = determine_turn(prev_node, current, next_node)
             execute_turn(direction)
 
-        # use color detection for pickup nodes, time-based for others
-        if next_node in pickup_nodes:
-            color = follow_line_until_color()
-            if color:
-                print(f"  Detected {color} tape at {next_node}")
-                stop()
-                time.sleep(2)  # pause at pickup
-            else:
-                print(f"  Warning: reached {next_node} by timeout, no color detected")
-        else:
-            follow_line_until_color(timeout=5)  # time-based for intermediate nodes
+        color = follow_line_until_color()
 
-        print(f"  Reached: {next_node}")
+        if color:
+            print(f"  Reached: {next_node}")
+        else:
+            print(f"  Warning: timeout reaching {next_node}")
+
+        if next_node in pickup_nodes:
+            detected_pickups.append(next_node)
+            print(f"  Pickup detected at {next_node} ({len(detected_pickups)}/{len(pickup_nodes)})")
+            stop()
+            time.sleep(2)
+
     stop()
 
 if __name__ == "__main__":

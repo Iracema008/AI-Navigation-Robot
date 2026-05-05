@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nodey — Warehouse Robot Simulator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; background: #1a1a2e; color: #eee; }
+
+        .sidebar {
+            width: 300px; background: #16213e; padding: 24px; display: flex;
+            flex-direction: column; gap: 16px; overflow-y: auto;
+        }
+        .sidebar h1 { font-size: 22px; color: #e94560; margin-bottom: 4px; }
+        .sidebar h2 { font-size: 14px; color: #888; font-weight: normal; }
+        .sidebar h3 { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; }
+
+        .node-check { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+        .node-check input { width: 16px; height: 16px; cursor: pointer; }
+        .node-check label { cursor: pointer; font-size: 14px; }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+        .btn {
+            padding: 12px; border: none; border-radius: 8px; font-size: 15px;
+            font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .btn-start { background: #e94560; color: white; }
+        .btn-start:hover { background: #c73e54; }
+        .btn-start:disabled { background: #555; cursor: not-allowed; }
+        .btn-reset { background: #333; color: #ccc; }
+        .btn-reset:hover { background: #444; }
+
+        .blocked-list { font-size: 13px; color: #aaa; }
+        .blocked-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 4px 8px; background: #1a1a2e; border-radius: 4px; margin: 4px 0;
+        }
+        .blocked-item .remove { color: #e94560; cursor: pointer; font-weight: bold; }
+
+        #log {
+            flex: 1; overflow-y: auto; font-size: 13px; font-family: monospace;
+            background: #0f0f23; border-radius: 8px; padding: 12px; line-height: 1.6;
+            min-height: 150px;
+        }
+        .log-sa { color: #e94560; }
+        .log-astar { color: #4ecdc4; }
+        .log-pickup { color: #f9d923; }
+        .log-info { color: #888; }
+        .log-done { color: #44bd32; }
+
+        .canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+        canvas { background: #0f3460; border-radius: 12px; }
+
+        .stats {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+            font-size: 13px;
+        }
+        .stat-box {
+            background: #1a1a2e; border-radius: 6px; padding: 8px 10px;
+        }
+        .stat-label { color: #888; font-size: 11px; }
+        .stat-value { color: #4ecdc4; font-size: 18px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <h1>Nodey</h1>
+            <h2>Warehouse Robot Simulator</h2>
+        </div>
+
+        <h3>Pickup Nodes</h3>
+        <div id="pickupChecks"></div>
+
+        <h3>Blocked Edges <span style="font-size:11px; color:#666">(click edges on graph)</span></h3>
+        <div id="blockedList" class="blocked-list"><span style="color:#555">None</span></div>
+
+        <div style="display:flex; gap:8px">
+            <button class="btn btn-start" id="startBtn" onclick="runPlan()">Start</button>
+            <button class="btn btn-reset" onclick="resetAll()">Reset</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-label">SA Order</div>
+                <div class="stat-value" id="saOrder">—</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Cost</div>
+                <div class="stat-value" id="totalCost">—</div>
+            </div>
+        </div>
+
+        <h3>Log</h3>
+        <div id="log"></div>
+    </div>
+
+    <div class="canvas-wrap">
+        <canvas id="graph" width="900" height="550"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('graph');
+        const ctx = canvas.getContext('2d');
+
+        const nodeColors = {
+            'node3': '#e94560',
+            'node5': '#44bd32',
+            'node6': '#3498db',
+            'node7': '#f9d923'
+        };
+
+        const screenPos = {
+            'start': {x: 80, y: 250},
+            'node1': {x: 250, y: 100},
+            'node2': {x: 250, y: 250},
+            'node5': {x: 250, y: 420},
+            'node3': {x: 460, y: 100},
+            'node4': {x: 460, y: 250},
+            'node7': {x: 650, y: 250},
+            'node6': {x: 650, y: 100},
+            'end':   {x: 820, y: 250}
+        };
+
+        let graphData = null;
+        let blockedEdges = [];
+        let animating = false;
+        let robotPos = null;
+        let activePath = [];
+        let visitedNodes = [];
+
+        fetch('/api/graph').then(r => r.json()).then(data => {
+            graphData = data;
+            buildPickupChecks(data.pickup_nodes);
+            draw();
+        });
+
+        function buildPickupChecks(pickups) {
+            const container = document.getElementById('pickupChecks');
+            const allNodes = Object.keys(screenPos).filter(n => n !== 'start' && n !== 'end');
+            container.innerHTML = allNodes.map(n => {
+                const color = nodeColors[n] || '#888';
+                const checked = n in pickups ? 'checked' : '';
+                return `<div class="node-check">
+                    <input type="checkbox" id="chk_${n}" ${checked}>
+                    <span class="color-dot" style="background:${color}"></span>
+                    <label for="chk_${n}">${n}</label>
+                </div>`;
+            }).join('');
+        }
+
+        function getSelectedPickups() {
+            const allNodes = Object.keys(screenPos).filter(n => n !== 'start' && n !== 'end');
+            return allNodes.filter(n => {
+                const chk = document.getElementById('chk_' + n);
+                return chk && chk.checked;
+            });
+        }
+
+        function updateBlockedList() {
+            const container = document.getElementById('blockedList');
+            if (blockedEdges.length === 0) {
+                container.innerHTML = '<span style="color:#555">None</span>';
+                return;
+            }
+            container.innerHTML = blockedEdges.map((e, i) =>
+                `<div class="blocked-item">
+                    <span>${e[0]} ↔ ${e[1]}</span>
+                    <span class="remove" onclick="removeBlocked(${i})">✕</span>
+                </div>`
+            ).join('');
+        }
+
+        function removeBlocked(i) {
+            blockedEdges.splice(i, 1);
+            updateBlockedList();
+            draw();
+        }
+
+        function log(msg, cls = 'log-info') {
+            const el = document.getElementById('log');
+            el.innerHTML += `<div class="${cls}">${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // edge click detection
+        canvas.addEventListener('click', (e) => {
+            if (animating) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            if (!graphData) return;
+
+            let closest = null;
+            let closestDist = 25;
+
+            const seen = new Set();
+            for (const [from, neighbors] of Object.entries(graphData.grid)) {
+                for (const to of Object.keys(neighbors)) {
+                    const key = [from, to].sort().join('|');
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+
+                    const a = screenPos[from];
+                    const b = screenPos[to];
+                    if (!a || !b) continue;
+
+                    const dist = pointToSegDist(mx, my, a.x, a.y, b.x, b.y);
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closest = [from, to].sort();
+                    }
+                }
+            }
+
+            if (closest) {
+                const idx = blockedEdges.findIndex(e =>
+                    e[0] === closest[0] && e[1] === closest[1]);
+                if (idx >= 0) {
+                    blockedEdges.splice(idx, 1);
+                } else {
+                    blockedEdges.push(closest);
+                }
+                updateBlockedList();
+                draw();
+            }
+        });
+
+        function pointToSegDist(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const len2 = dx * dx + dy * dy;
+            let t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / len2));
+            const projX = x1 + t * dx, projY = y1 + t * dy;
+            return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (!graphData) return;
+
+            // draw edges
+            const seen = new Set();
+            for (const [from, neighbors] of Object.entries(graphData.grid)) {
+                for (const [to, weight] of Object.entries(neighbors)) {
+                    const key = [from, to].sort().join('|');
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+
+                    const a = screenPos[from];
+                    const b = screenPos[to];
+                    if (!a || !b) continue;
+
+                    const isBlocked = blockedEdges.some(e =>
+                        (e[0] === from && e[1] === to) || (e[0] === to && e[1] === from) ||
+                        (e.sort().join('|') === key));
+
+                    const isActive = activePath.length > 0 && isEdgeInPath(from, to);
+
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+
+                    if (isBlocked) {
+                        ctx.strokeStyle = '#e94560';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([8, 6]);
+                    } else if (isActive) {
+                        ctx.strokeStyle = '#4ecdc4';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([]);
+                    } else {
+                        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([]);
+                    }
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // weight label
+                    const mx = (a.x + b.x) / 2;
+                    const my = (a.y + b.y) / 2;
+                    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+                    const off = 14;
+                    ctx.fillStyle = isBlocked ? '#e94560' : 'rgba(255,255,255,0.5)';
+                    ctx.font = '12px monospace';
+                    ctx.fillText(weight, mx + Math.sin(angle) * off - 4, my - Math.cos(angle) * off + 4);
+
+                    // blocked X
+                    if (isBlocked) {
+                        ctx.fillStyle = '#e94560';
+                        ctx.font = 'bold 18px sans-serif';
+                        ctx.fillText('✕', mx - 6, my + 6);
+                    }
+                }
+            }
+
+            // draw nodes
+            const selectedPickups = getSelectedPickups();
+            for (const [name, pos] of Object.entries(screenPos)) {
+                const isPickup = selectedPickups.includes(name);
+                const isVisited = visitedNodes.includes(name);
+                const color = nodeColors[name] || (name === 'start' ? '#4ecdc4' : name === 'end' ? '#44bd32' : '#ccc');
+
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, isPickup ? 28 : 22, 0, Math.PI * 2);
+                if (isPickup) {
+                    ctx.fillStyle = isVisited ? 'rgba(255,255,255,0.15)' : color;
+                } else if (name === 'start' || name === 'end') {
+                    ctx.fillStyle = color;
+                } else {
+                    ctx.fillStyle = '#2d3436';
+                }
+                ctx.fill();
+                ctx.strokeStyle = isPickup ? color : 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = isPickup ? 3 : 2;
+                ctx.stroke();
+
+                // visited checkmark
+                if (isVisited && isPickup) {
+                    ctx.fillStyle = '#44bd32';
+                    ctx.font = 'bold 20px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('✓', pos.x, pos.y + 7);
+                    ctx.textAlign = 'start';
+                }
+
+                // node label
+                ctx.fillStyle = (isPickup && !isVisited) ? '#fff' : '#ddd';
+                ctx.font = 'bold 13px sans-serif';
+                ctx.textAlign = 'center';
+                if (!(isVisited && isPickup)) {
+                    ctx.fillText(name === 'start' ? 'Start' : name === 'end' ? 'End' : name.replace('node', 'N'),
+                        pos.x, pos.y + 5);
+                }
+                ctx.textAlign = 'start';
+            }
+
+            // draw robot
+            if (robotPos) {
+                ctx.beginPath();
+                ctx.arc(robotPos.x, robotPos.y, 12, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.strokeStyle = '#e94560';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.fillStyle = '#e94560';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('N', robotPos.x, robotPos.y + 4);
+                ctx.textAlign = 'start';
+            }
+        }
+
+        function isEdgeInPath(a, b) {
+            for (let i = 0; i < activePath.length - 1; i++) {
+                if ((activePath[i] === a && activePath[i+1] === b) ||
+                    (activePath[i] === b && activePath[i+1] === a)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        async function runPlan() {
+            if (animating) return;
+
+            const pickups = getSelectedPickups();
+            if (pickups.length === 0) {
+                log('Select at least one pickup node!', 'log-sa');
+                return;
+            }
+
+            clearLog();
+            visitedNodes = [];
+            activePath = [];
+            document.getElementById('startBtn').disabled = true;
+            animating = true;
+
+            log('Running Simulated Annealing...', 'log-sa');
+
+            const res = await fetch('/api/plan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    pickup_nodes: pickups,
+                    blocked_edges: blockedEdges
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.error) {
+                log('Error: ' + data.error, 'log-sa');
+                animating = false;
+                document.getElementById('startBtn').disabled = false;
+                return;
+            }
+
+            document.getElementById('saOrder').textContent = data.sa_order.map(n => n.replace('node', 'N')).join(' → ');
+            document.getElementById('saOrder').style.fontSize = '12px';
+            document.getElementById('totalCost').textContent = data.total_cost;
+
+            log(`SA order: ${data.sa_order.join(' → ')}`, 'log-sa');
+            log(`Total cost: ${data.total_cost}`, 'log-sa');
+            log('', 'log-info');
+
+            // animate each leg
+            for (const leg of data.legs) {
+                if (!leg.path) {
+                    log(`No path from ${leg.from} to ${leg.to}!`, 'log-sa');
+                    continue;
+                }
+
+                log(`A* path: ${leg.path.join(' → ')} (cost ${leg.cost})`, 'log-astar');
+                activePath = leg.path;
+                draw();
+
+                // animate robot along path
+                for (let i = 0; i < leg.path.length - 1; i++) {
+                    const from = screenPos[leg.path[i]];
+                    const to = screenPos[leg.path[i + 1]];
+                    await animateMove(from, to);
+                }
+
+                if (leg.is_pickup) {
+                    visitedNodes.push(leg.to);
+                    log(`Pickup at ${leg.to}`, 'log-pickup');
+                    draw();
+                    await sleep(800);
+                }
+            }
+
+            activePath = [];
+            log('', 'log-info');
+            log('All pickups complete! Arrived at End.', 'log-done');
+            draw();
+
+            animating = false;
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        function animateMove(from, to) {
+            return new Promise(resolve => {
+                const duration = 600;
+                const start = performance.now();
+
+                function step(now) {
+                    const t = Math.min(1, (now - start) / duration);
+                    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+                    robotPos = {
+                        x: from.x + (to.x - from.x) * ease,
+                        y: from.y + (to.y - from.y) * ease
+                    };
+                    draw();
+                    if (t < 1) requestAnimationFrame(step);
+                    else resolve();
+                }
+                requestAnimationFrame(step);
+            });
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function resetAll() {
+            blockedEdges = [];
+            visitedNodes = [];
+            activePath = [];
+            robotPos = null;
+            animating = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('saOrder').textContent = '—';
+            document.getElementById('saOrder').style.fontSize = '';
+            document.getElementById('totalCost').textContent = '—';
+            updateBlockedList();
+            clearLog();
+            if (graphData) {
+                buildPickupChecks(graphData.pickup_nodes);
+            }
+            draw();
+        }
+    </script>
+</body>
+</html>
