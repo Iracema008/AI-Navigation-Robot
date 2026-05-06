@@ -1,4 +1,9 @@
 '''Flask simulator for Nodey warehouse robot'''
+'''
+Written using Claude for backup simulation 
+and testing of pathfinding and pickup logic before 
+hardware implementation
+'''
 
 from flask import Flask, render_template, request, jsonify
 import sys
