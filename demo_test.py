@@ -1,4 +1,5 @@
 ''' Working line following test, w/ultra sonic. '''
+# demo only when RGB isnt working
 
 import RPi.GPIO as GPIO
 import time
