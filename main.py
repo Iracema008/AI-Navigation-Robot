@@ -15,119 +15,59 @@ from navigation.astar import astar
 SEGMENT_TIME = 2.0
 TURN_DURATION = 0.4
 
-# hard coded turn map for now, coming_from, at_junction, going_to -> direction
+# hard coded turn map for testing, coming_from, at_junction, going_to -> direction
 # Fill this in later to match physical track
 TURN_MAP = {
+    # start
+    ("start", "node1", "node3"):"straight",
+    ("start", "node1", "node4"): "right",
+    ("start", "node2", "node4"): "left",
+    ("start", "node2", "node5"): "straight",
+    # node 1
+    ("node1", "node3", "node6"): "straight",
+    ("node1", "node3", "node7"): "right",
+    ("node1", "node4", "node2"): "right",
+    ("node1", "node4", "node7"): "straight",
+    # node 2
+    ("node2", "node4", "node1"): "right",
+    ("node2", "node4", "node7"): "straight",
+    ("node2", "node5", "node7"): "right",
+    # node3 
+    ("node3", "node6", "end"): "right",
+    ("node3", "node7", "node4"): "left",
+    ("node3", "node7", "end"): "right",
+    # node4
+    ("node4", "node7", "node3"): "left",
+    ("node4", "node7", "end"): "straight",
+    ("node4", "node2", "start"): "right",
+    ("node4", "node2", "node5"): "left",
+    # node5
+    ("node5", "node2", "start"): "right",
+    ("node5", "node2", "node4"): "left",
+    ("node5", "node7", "node4"): "left",
+    ("node5", "node7", "end"): "right",
 
-    # --- Leaving Start ---
-
-# Start heading right, at node1
-
-    ("start", "node1", "node3"):        "straight",  # continue right
-
-    ("start", "node1", "node4"):        "right",     # turn down to middle row
-
-
-
-# Start heading down, at node2
-
-    ("start", "node2", "node4"):        "left",      # turn right onto middle row
-
-    ("start", "node2", "node5"):        "straight",  # continue down
-
-
-
-# --- From node1 ---
-
-    ("node1", "node3", "node6"):        "straight",  # continue right on top row
-
-    ("node1", "node3", "node7"):        "right",     # diagonal down-right to node7
-
-    ("node1", "node4", "node2"):        "right",     # turn left back to node2
-
-    ("node1", "node4", "node7"):        "straight",  # continue right on middle row
-
-
-
-# --- From node2 ---
-
-    ("node2", "node4", "node1"):        "right",     # turn up to top row via node1
-
-    ("node2", "node4", "node7"):        "straight",  # continue right on middle row
-
-    ("node2", "node5", "node7"):        "right",     # diagonal up-right to node7
-
-
-# --- From node3 ---
-
-    ("node3", "node6", "end"):          "right",     # drop down to End
-
-    ("node3", "node7", "node4"):        "left",      # continue left on middle row
-
-    ("node3", "node7", "end"):          "right",     # turn right to End
-
-
-# --- From node4 ---
-
-    ("node4", "node7", "node3"):        "left",      # diagonal up-left to node3
-
-    ("node4", "node7", "end"):          "straight",  # continue right to End
-
-    ("node4", "node2", "start"):        "right",     # turn up to Start
-
-    ("node4", "node2", "node5"):        "left",      # turn down to node5
-
-
-# --- From node5 ---
-
-    ("node5", "node2", "start"):        "right",     # turn up then right to Start
-
-    ("node5", "node2", "node4"):        "left",      # turn right on middle row
-
-    ("node5", "node7", "node4"):        "left",      # continue left to node4
-
-    ("node5", "node7", "end"):          "right",     # turn right to End
-
-
-# --- From node6 ---
-
-    ("node6", "end", "node7"):          "left",      # continue left on middle row
-
-    ("node6", "node3", "node1"):        "straight",  # continue left on top row
-
-    ("node6", "node3", "node7"):        "left",      # diagonal down-left to node7
-
-
-# --- From node7 ---
-
-    ("node7", "end", "node6"):          "right",     # turn up to node6
-
-    ("node7", "node3", "node1"):        "right",     # diagonal up-left then left
-
-    ("node7", "node3", "node6"):        "left",      # diagonal up-left then right
-
-    ("node7", "node4", "node2"):        "right",     # turn left to node2
-
-    ("node7", "node4", "node1"):        "left",      # turn up to node1 via node4
-
-    ("node7", "node5", "node2"):        "right",     # diagonal down-left to node5
-
-# --- Arriving at End ---
-
-    ("end", "node6", "node3"):          "right",     # go up then left
-
-    ("end", "node7", "node4"):          "right",     # continue left
-
-    ("end", "node7", "node3"):          "left",      # diagonal up-left
-
+    ("node6", "end", "node7"): "left",
+    ("node6", "node3", "node1"): "straight",
+    ("node6", "node3", "node7"): "left",
+    
+    ("node7", "end", "node6"): "right",
+    ("node7", "node3", "node1"): "right",
+    ("node7", "node3", "node6"): "left",
+    ("node7", "node4", "node2"): "right",
+    ("node7", "node4", "node1"): "left",
+    ("node7", "node5", "node2"): "right",
+    # end
+    ("end", "node6", "node3"): "right",
+    ("end", "node7", "node4"): "right",
+    ("end", "node7", "node3"): "left",
 }
-
-
 detected_pickups = []
 
 def determine_turn(prev_node, curr_node, next_node):
     return TURN_MAP.get((prev_node, curr_node, next_node), "straight")
 
+# try to keep speed at 70, else doesn't turn well.
 def execute_turn(direction):
     stop()
     time.sleep(0.1)
@@ -195,6 +135,7 @@ def check_pickup():
     if color in expected_colors and color not in detected_pickups:
         detected_pickups.append(color)
         node = [n for n, c in pickup_nodes.items() if c == color][0]
+    
         print(f"Pickup point detected: {color} at {node} ({len(detected_pickups)}/{len(expected_colors)})")
     elif color in detected_pickups:
         print(f"Already collected: {color}, continuing...")
@@ -214,6 +155,8 @@ def check_pickup():
         check_pickup()
         print(f"  Reached: {next_node}")
     stop()'''
+
+
 def navigate_path(path):
     print(f"  Navigating: {path}")
     for i in range(len(path) - 1):
@@ -237,8 +180,8 @@ def navigate_path(path):
             print(f"  Pickup detected at {next_node} ({len(detected_pickups)}/{len(pickup_nodes)})")
             stop()
             time.sleep(2)
-
     stop()
+
 
 if __name__ == "__main__":
     layout_gpio()
